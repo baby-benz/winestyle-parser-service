@@ -98,4 +98,12 @@ public class Wine {
 
     @Column
     private Double rating;
+
+    @OneToOne(fetch = FetchType.EAGER,
+            cascade = {CascadeType.ALL})
+    @JoinTable(
+            name = "wine_image",
+            joinColumns = @JoinColumn(name = "wine_id", referencedColumnName = "id"),
+            inverseJoinColumns = @JoinColumn(name = "image_id", referencedColumnName = "id"))
+    private ImageAlcohol image;
 }

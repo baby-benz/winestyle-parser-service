@@ -1,6 +1,7 @@
 package com.wine.to.up.winestyle.parser.service.service;
 
 import com.wine.to.up.winestyle.parser.service.controller.exception.NoEntityException;
+import com.wine.to.up.winestyle.parser.service.domain.entity.ImageAlcohol;
 import com.wine.to.up.winestyle.parser.service.domain.entity.Wine;
 
 import java.math.BigDecimal;
@@ -60,4 +61,12 @@ public interface WineService {
      * @return Список всех вин.
      */
     List<Wine> getAllWines();
+
+    /**
+     * Обновить изображение для вина
+     * @param image изображение
+     * @param url ссылка на вино
+     * @return сущность вина, с добавленным/обновленным изображением
+     */
+    Wine updateImage(ImageAlcohol image, String url);
 }

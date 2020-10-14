@@ -1,5 +1,6 @@
 package com.wine.to.up.winestyle.parser.service.service.implementation;
 
+import com.wine.to.up.winestyle.parser.service.domain.entity.ImageAlcohol;
 import com.wine.to.up.winestyle.parser.service.service.ParserService;
 import com.wine.to.up.winestyle.parser.service.controller.exception.ServiceIsBusyException;
 import com.wine.to.up.winestyle.parser.service.domain.entity.Wine;
@@ -14,7 +15,17 @@ import org.jsoup.select.Elements;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import javax.imageio.ImageIO;
+import javax.sql.rowset.serial.SerialBlob;
+import javax.sql.rowset.serial.SerialException;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.net.URL;
+import java.sql.Blob;
+import java.sql.SQLException;
+import java.util.Arrays;
 
 /**
  * Класс-парсер.
@@ -89,6 +100,12 @@ public class WinestyleParserService implements ParserService {
                 } else {
                     updatePriceAndRating(productElement, urlToProductPage);
                 }
+
+                if ((wineService.getWineByUrl(urlToProductPage)).getImage() == null){
+                    productDoc = documentService.getJsoupDocument(mainUrl + urlToProductPage);
+                    String imageUrl = parseImageUrl(productDoc.selectFirst(".left-aside"));
+                    updateImageByProductUrl(imageUrl, urlToProductPage);
+                }
             }
             mainDoc = documentService.getJsoupDocument(alcoholUrl + "?page=" + i);
         }
@@ -149,6 +166,7 @@ public class WinestyleParserService implements ParserService {
      * @param builder Билдер сущности вина. 
      */
     private void parseProductPageInfo(Document doc, Wine.WineBuilder builder) {
+        ImageAlcohol image;
         String imageUrl;
         String taste;
         String aroma;
@@ -159,6 +177,7 @@ public class WinestyleParserService implements ParserService {
         Element leftBlock = doc.selectFirst(".left-aside");
 
         imageUrl = parseImageUrl(leftBlock);
+        image = downloadImageByUrl(imageUrl);
 
         // Block containing product's tasting notes
         Element articleBlock = doc.selectFirst(".articles-col");
@@ -172,7 +191,7 @@ public class WinestyleParserService implements ParserService {
 
         description = parseDescription(descriptionBlock);
 
-        builder.imageUrl(imageUrl).taste(taste).aroma(aroma).foodPairing(foodPairing).description(description);
+        builder.imageUrl(imageUrl).image(image).taste(taste).aroma(aroma).foodPairing(foodPairing).description(description);
     }
 
     /**
@@ -463,5 +482,39 @@ public class WinestyleParserService implements ParserService {
             log.warn("product's description is not specified");
             return null;
         }
+    }
+
+    /**
+     * Загрузка изображения по ссылке
+     * @param imageUrl Строка, ссылка на изображение
+     * @return Сущность с blob полем, в котором хранится изображение или Null
+     */
+    private ImageAlcohol downloadImageByUrl(String imageUrl){
+        try {
+            URL url = new URL(imageUrl);
+            ImageAlcohol imageWine = new ImageAlcohol();
+            BufferedImage bufferedImage = ImageIO.read(url.openStream());
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ImageIO.write(bufferedImage, "jpg", baos);
+            Blob blobImage = new SerialBlob(baos.toByteArray());
+            imageWine.setImage(blobImage);
+            return imageWine;
+        } catch (IOException ex){
+            log.warn("Cannot get image from link: {}", imageUrl, ex);
+            return null;
+        } catch (SQLException ex) {
+            log.warn("Cannot convert image to blob from link: {}", imageUrl, ex);
+            return null;
+        }
+    }
+
+    /**
+     * Добавляет изображение для строк в бд, которые не имеею изображение
+     * @param imageUrl ссылка на изображение
+     * @param urlToProductPage ссылка на продукт
+     */
+    private void updateImageByProductUrl(String imageUrl, String urlToProductPage){
+        ImageAlcohol imageAlcohol = downloadImageByUrl(imageUrl);
+        wineService.updateImage(imageAlcohol, urlToProductPage);
     }
 }
