@@ -1,5 +1,6 @@
 package com.wine.to.up.winestyle.parser.service.service.implementation;
 
+import com.wine.to.up.winestyle.parser.service.domain.entity.ImageAlcohol;
 import com.wine.to.up.winestyle.parser.service.service.WineService;
 import com.wine.to.up.winestyle.parser.service.controller.exception.NoEntityException;
 import com.wine.to.up.winestyle.parser.service.domain.entity.Wine;
@@ -33,6 +34,13 @@ public class WinestyleWineService implements WineService {
     public Wine updateRating(Double rating, String url){
         Wine wine = getWineByUrl(url);
         wine.setRating(rating);
+        return wineRepository.save(wine);
+    }
+
+    @Override
+    public Wine updateImage(ImageAlcohol image, String url){
+        Wine wine = getWineByUrl(url);
+        wine.setImage(image);
         return wineRepository.save(wine);
     }
 
